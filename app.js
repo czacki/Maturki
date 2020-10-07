@@ -2,15 +2,15 @@ require('dotenv').config();
 
 var express = require('express')
 var app = express()
-const MongoClient = require('mongodb').MongoClient;
-const uri = "mongodb+srv://czacki_sudo:"+ process.env.PASSWORD +"@czackicluster.yysdi.gcp.mongodb.net/"+ process.env.DBNAME +"?retryWrites=true&w=majority";
+
+const MongoClient = require('mongodb').MongoClient
+const uri = `mongodb+srv://czacki_sudo:${process.env.PASSWORD}@czackicluster.yysdi.gcp.mongodb.net/${process.env.DBNAME}?retryWrites=true&w=majority`
+var db
 
 app.use(express.static('public'))
 
-var db;
 MongoClient.connect(uri, (err, dbase) => {
     if(err) throw err
-   // console.log(db.db("CzackiCluster"))
     db = dbase.db("CzackiCluster")
 })
 
@@ -20,8 +20,7 @@ app.get('/getTime', (req, res) => {
     //get database sign in time and send remaining time
 
     db.collection("Users").findOne({"Name": "Timetable"}, (err, result) => {
-        if(err) res.end(err)
-        console.log(result.Time)
+        if(err) res.end(err.message)
         res.end(JSON.stringify(result.Time))
     })
   
@@ -32,7 +31,7 @@ app.get('/getTimetable', (req, res) => {
     //get already reserved timetables from database
 
     db.collection("Users").find({}, {"time": 1}).toArray((err, result) => {
-        if(err) res.end(err)
+        if(err) res.end(err.message)
         res.end(JSON.stringify(result))
     })
     
@@ -40,6 +39,8 @@ app.get('/getTimetable', (req, res) => {
 
 
 app.post('/signIn', (req, res) => {
+
+    //get user data
 
     console.log(req.body)
 
@@ -51,12 +52,12 @@ app.post('/signIn', (req, res) => {
 
     var dbo = db.collection("Users")
 
-    //database check
+    //check database and update user object with timetable
 
     if(id && time && subject){
 
         dbo.updateOne({ID:id}, {$set: {"subject": subject, "time": time}}, (err, result) => {
-            if(err) res.end(err)
+            if(err) res.end(err.message)
             else if(result){
                 res.end(result.ok)
             }
@@ -67,12 +68,12 @@ app.post('/signIn', (req, res) => {
 })
 
 app.post('/addUser', (req, res) => {
-    if(payload.password == process.env.ADMIN_AUTH && payload.superuser == process.env.SUPERUSER){   //do better protection
+    if(payload.password == process.env.ADMIN_AUTH && payload.superuser == process.env.SUPERUSER){   //do a better protection XDDD
         var payload = req.body
 
         var usersList = payload.usersToAdd
         var toAdd = []
-        const userObj = {   //migrate to static file or sth
+        const userObj = {   //we might migrate to static file or sth
             "name": "",
             "lastName": "",
             "class": "",
@@ -88,7 +89,7 @@ app.post('/addUser', (req, res) => {
         })
 
         db.collection("Users").insertMany(toAdd, (err, result)=>{
-            if(err) res.end(err)
+            if(err) res.end(err.message)
             res.end(result.ok)
         })
 
@@ -97,7 +98,7 @@ app.post('/addUser', (req, res) => {
 })
 
 app.post('/deleteUser', (req, res) => {
-    if(payload.password == process.env.ADMIN_AUTH && payload.superuser == process.env.SUPERUSER){   //do better protection
+    if(payload.password == process.env.ADMIN_AUTH && payload.superuser == process.env.SUPERUSER){   //do a better protection XDDD
 
         req.body.usersToDelete.forEach((e, i, a) => {
             db.collection("Users").deleteOne({$or: [{"name":e.name, "lastName":e.name, "class":e.class}, {"ID":e.ID}]}, (err, result) => {
@@ -113,7 +114,9 @@ app.use(function (err, req, res, next) {
     res.status(400).send(err.message)
   })
 
-app.listen(3000)
+app.listen(3000, ()=>{
+    console.log("working on adress port 3000")
+})
 
 
 // '/getTime' - GET czas do rozpoczęcia zapisów
